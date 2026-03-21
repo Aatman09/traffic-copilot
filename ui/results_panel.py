@@ -200,11 +200,12 @@ def _render_notify_tab():
     st.subheader("Send Notifications", divider="gray")
 
     with st.form("notify_form"):
-        channel = st.radio("Channel", ["SMS", "WhatsApp", "Both"], horizontal=True)
+        channel = st.radio("Channel", ["WhatsApp", "SMS", "Both"],
+                           horizontal=True, help="WhatsApp via Gupshup, SMS via Twilio")
         recipients = st.text_area(
             "Recipient phone numbers",
             placeholder="+919876543210\n+919876543211",
-            help="One number per line, E.164 format (e.g. +91...)",
+            help="One number per line with country code (e.g. +91...)",
             height=80,
         )
         message = st.text_area("Message", value=default_msg, height=150)

@@ -1,63 +1,30 @@
 """
-services/notifications.py — Send SMS and WhatsApp notifications via Twilio.
+services/notifications.py — Send WhatsApp and SMS notifications via Twilio.
 """
 
 import os
 from twilio.rest import Client
 
 
+def _get_secret(key: str) -> str | None:
+    """Read a secret from env or Streamlit secrets."""
+    val = os.environ.get(key)
+    if not val:
+        try:
+            import streamlit as st
+            val = st.secrets.get(key)
+        except Exception:
+            pass
+    return val or None
+
+
 def _get_client():
-    """Initialise the Twilio client using credentials from secrets or env."""
-    account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
-
-    if not account_sid or not auth_token:
-        try:
-            import streamlit as st
-            account_sid = account_sid or st.secrets.get("TWILIO_ACCOUNT_SID")
-            auth_token = auth_token or st.secrets.get("TWILIO_AUTH_TOKEN")
-        except Exception:
-            pass
-
-    if not account_sid or not auth_token:
-        raise ValueError(
-            "Twilio credentials not found. "
-            "Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .streamlit/secrets.toml "
-            "or as environment variables."
-        )
-    return Client(account_sid, auth_token)
-
-
-def _get_from_number():
-    """Get the Twilio phone number for sending SMS."""
-    number = os.environ.get("TWILIO_PHONE_NUMBER")
-    if not number:
-        try:
-            import streamlit as st
-            number = st.secrets.get("TWILIO_PHONE_NUMBER")
-        except Exception:
-            pass
-    if not number:
-        raise ValueError(
-            "TWILIO_PHONE_NUMBER not found. "
-            "Set it in .streamlit/secrets.toml or as an environment variable."
-        )
-    return number
-
-
-def _get_whatsapp_number():
-    """Get the Twilio WhatsApp sender number."""
-    number = os.environ.get("TWILIO_WHATSAPP_NUMBER")
-    if not number:
-        try:
-            import streamlit as st
-            number = st.secrets.get("TWILIO_WHATSAPP_NUMBER")
-        except Exception:
-            pass
-    # Fall back to the regular Twilio number with whatsapp: prefix
-    if not number:
-        number = _get_from_number()
-    return number
+    """Initialise the Twilio client."""
+    sid = _get_secret("TWILIO_ACCOUNT_SID")
+    token = _get_secret("TWILIO_AUTH_TOKEN")
+    if not sid or not token:
+        raise ValueError("Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .streamlit/secrets.toml")
+    return Client(sid, token)
 
 
 def format_alert_message(crash_details: dict, severity: dict | None = None,
@@ -88,30 +55,27 @@ def format_alert_message(crash_details: dict, severity: dict | None = None,
     return "\n".join(lines)
 
 
-def send_sms(to_numbers: list[str], message: str) -> list[dict]:
-    """
-    Send an SMS to one or more phone numbers.
+def send_whatsapp(to_numbers: list[str], message: str) -> list[dict]:
+    """Send WhatsApp messages via Twilio sandbox."""
+    wa_number = _get_secret("TWILIO_WHATSAPP_NUMBER")
+    if not wa_number:
+        return [{"number": n, "error": "TWILIO_WHATSAPP_NUMBER not set"} for n in to_numbers]
 
-    Args:
-        to_numbers: List of E.164 formatted numbers (e.g. ["+919876543210"])
-        message: The message body
-
-    Returns:
-        List of dicts with {number, status, sid} or {number, error}
-    """
     client = _get_client()
-    from_number = _get_from_number()
+    from_wa = f"whatsapp:{wa_number}"
     results = []
 
     for number in to_numbers:
-        number = number.strip()
+        number = number.strip().replace(" ", "").replace("-", "")
         if not number:
             continue
+        if not number.startswith("+"):
+            number = f"+{number}"
         try:
             msg = client.messages.create(
                 body=message,
-                from_=from_number,
-                to=number,
+                from_=from_wa,
+                to=f"whatsapp:{number}",
             )
             results.append({"number": number, "status": msg.status, "sid": msg.sid})
         except Exception as e:
@@ -120,31 +84,23 @@ def send_sms(to_numbers: list[str], message: str) -> list[dict]:
     return results
 
 
-def send_whatsapp(to_numbers: list[str], message: str) -> list[dict]:
-    """
-    Send a WhatsApp message to one or more phone numbers.
+def send_sms(to_numbers: list[str], message: str) -> list[dict]:
+    """Send SMS via Twilio."""
+    from_number = _get_secret("TWILIO_PHONE_NUMBER")
+    if not from_number:
+        return [{"number": n, "error": "TWILIO_PHONE_NUMBER not set (buy a number from Twilio)"} for n in to_numbers]
 
-    Args:
-        to_numbers: List of E.164 formatted numbers (e.g. ["+919876543210"])
-        message: The message body
-
-    Returns:
-        List of dicts with {number, status, sid} or {number, error}
-    """
     client = _get_client()
-    from_number = f"whatsapp:{_get_whatsapp_number()}"
     results = []
 
     for number in to_numbers:
-        number = number.strip()
+        number = number.strip().replace(" ", "").replace("-", "")
         if not number:
             continue
+        if not number.startswith("+"):
+            number = f"+{number}"
         try:
-            msg = client.messages.create(
-                body=message,
-                from_=from_number,
-                to=f"whatsapp:{number}",
-            )
+            msg = client.messages.create(body=message, from_=from_number, to=number)
             results.append({"number": number, "status": msg.status, "sid": msg.sid})
         except Exception as e:
             results.append({"number": number, "error": str(e)})
