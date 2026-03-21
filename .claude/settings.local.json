@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /d/mesa/*.md /d/mesa/pyproject.toml)",
+      "Bash(find /d/mesa -type f -name *.py)",
+      "Bash(wc -l /d/mesa/**/*.py)",
+      "Bash(python:*)"
+    ]
+  }
+}

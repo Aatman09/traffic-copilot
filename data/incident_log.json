@@ -1,0 +1,178 @@
+[
+  {
+    "incident": {
+      "crash_lat": 23.023341925158878,
+      "crash_lng": 72.55971372127534,
+      "start_lat": 23.022611229639786,
+      "start_lng": 72.55991220474245,
+      "end_lat": 23.023964000655734,
+      "end_lng": 72.55967617034914,
+      "blocked_street": "Netaji Subhash Chandra Road",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 20:49:49",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred on Netaji Subhash Chandra Road at 20:49, affecting 1 lane with light traffic density. The incident is located near the junction of Netaji Subhash Chandra Road and Relief Road.",
+    "route_count": 3,
+    "saved_at": "2026-03-21 20:49:49"
+  },
+  {
+    "incident": {
+      "crash_lat": 23.034094540417534,
+      "crash_lng": 72.53834724426271,
+      "start_lat": 23.032801112343858,
+      "start_lng": 72.53729581832887,
+      "end_lat": 23.035210235576848,
+      "end_lng": 72.5391733646393,
+      "blocked_street": "Unnamed Road",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 21:16:16",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred on an unnamed road near the Sabarmati Riverfront at 21:16, affecting 1 lane with light traffic density.",
+    "route_count": 1,
+    "saved_at": "2026-03-21 21:16:16"
+  },
+  {
+    "incident": {
+      "crash_lat": 23.022423617989237,
+      "crash_lng": 72.57534027099611,
+      "start_lat": 23.022413743684616,
+      "start_lng": 72.57358074188234,
+      "end_lat": 23.02227550334389,
+      "end_lng": 72.5770139694214,
+      "blocked_street": "Swami Vivekananda Road / Swami Vivekananda Bridge",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 21:19:41",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash has occurred on Swami Vivekananda Road, affecting one lane and causing light traffic congestion. The incident happened at 21:19 on a clear evening.",
+    "route_count": 3,
+    "saved_at": "2026-03-21 21:19:41"
+  },
+  {
+    "incident": {
+      "crash_lat": 23.025533987955956,
+      "crash_lng": 72.54564285278322,
+      "start_lat": 23.02476380779132,
+      "start_lng": 72.54484891891481,
+      "end_lat": 23.026106683174778,
+      "end_lng": 72.54626512527467,
+      "blocked_street": "Unnamed Road",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 22:00:48",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred on an unnamed road near 23.02553, 72.54564 at 22:00, affecting 1 lane with light traffic density and clear weather.",
+    "route_count": 3,
+    "saved_at": "2026-03-21 22:00:48"
+  },
+  {
+    "incident": {
+      "crash_lat": 22.993320904229044,
+      "crash_lng": 72.56933212280275,
+      "start_lat": 23.00461907225644,
+      "start_lng": 72.5530242919922,
+      "end_lat": 23.001537847488226,
+      "end_lng": 72.58975982666017,
+      "blocked_street": "Unnamed Road",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 22:09:07",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred on an unnamed road near 22.99332, 72.56933, affecting 1 lane with light traffic density and clear weather.",
+    "route_count": 3,
+    "saved_at": "2026-03-21 22:09:07"
+  },
+  {
+    "incident": {
+      "crash_lat": 22.999207130743432,
+      "crash_lng": 72.55931138992311,
+      "start_lat": 23.004579569819953,
+      "start_lng": 72.55311012268068,
+      "end_lat": 23.001616854130248,
+      "end_lng": 72.5895667076111,
+      "blocked_street": "120 Circular Road",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 22:10:45",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred on 120 Circular Road, affecting 1 lane with light traffic density, at 22:10 on 2026-03-21. The incident is expected to cause minor disruptions.",
+    "route_count": 3,
+    "saved_at": "2026-03-21 22:10:45"
+  },
+  {
+    "incident": {
+      "crash_lat": 23.01907618729305,
+      "crash_lng": 72.55436539649965,
+      "start_lat": 23.019787152975205,
+      "start_lng": 72.5546979904175,
+      "end_lat": 23.017733241888916,
+      "end_lng": 72.55454778671266,
+      "blocked_street": "Unnamed Road",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 22:13:16",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred on an unnamed road near Bhudarpura Road, affecting one lane with light traffic density. The incident happened at 22:13 on a clear evening.",
+    "route_count": 3,
+    "saved_at": "2026-03-21 22:13:16"
+  },
+  {
+    "incident": {
+      "crash_lat": 23.024289848580022,
+      "crash_lng": 72.56258368492128,
+      "start_lat": 23.025751217463274,
+      "start_lng": 72.56237983703615,
+      "end_lat": 23.022729721074054,
+      "end_lng": 72.56287336349489,
+      "blocked_street": "Unnamed Road",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-21 22:17:42",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred on an unnamed road near 23.02429, 72.56258, affecting one lane with light traffic density and clear weather.",
+    "route_count": 3,
+    "saved_at": "2026-03-21 22:17:42"
+  }
+]
