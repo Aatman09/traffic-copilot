@@ -19,16 +19,15 @@ def _get_db_records(status=None, limit=50):
 
 
 def _resolve(incident_id):
-    """Resolve via backend API (broadcasts to user app), fallback to direct DB."""
+    """Resolve in DB first (instant), then notify backend (non-blocking)."""
+    from backend.database import resolve_incident as db_resolve
+    db_resolve(incident_id)
+    # Notify backend for WebSocket broadcast — fire and forget
     try:
-        from services.api_client import resolve_incident
-        resolve_incident(incident_id)
+        import requests
+        requests.post(f"http://localhost:8080/incidents/{incident_id}/resolve", timeout=2)
     except Exception:
-        try:
-            from backend.database import resolve_incident as db_resolve
-            db_resolve(incident_id)
-        except Exception:
-            pass
+        pass
 
 
 def render_history_panel():

@@ -3,12 +3,13 @@ app.py — Traffic Incident Co-Pilot (Google Maps-inspired layout).
 Sidebar = left panel, main area = map + results.
 
 Create/resolve go through the backend API (so WebSocket broadcasts reach the user app).
-Heavy AI analysis runs directly via services (no need to route through API).
+Heavy AI analysis runs in parallel via services.
 """
 
 import streamlit as st
 from streamlit_folium import st_folium
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 from config import APP_TITLE, APP_ICON
 from ui.styles import get_css
@@ -20,9 +21,6 @@ from ui.history_panel import render_history_panel
 from services.road_network import get_graph, get_nearest_edge, get_street_name
 from services.routing import compute_alternate_routes
 from services.llm_agent import analyze_incident, assess_severity, suggest_dispatch, predict_congestion
-from services.api_client import create_incident as api_create, API_BASE
-
-import requests
 
 # ── Page config ───────────────────────────────────────────────
 st.set_page_config(
@@ -39,6 +37,25 @@ init_session_state()
 @st.cache_resource(show_spinner="Loading road network...")
 def load_graph():
     return get_graph()
+
+
+def _create_incident_via_api(data):
+    """Create incident via backend API (fast-fail 5s timeout). Returns incident_id or None."""
+    try:
+        import requests
+        resp = requests.post("http://localhost:8080/incidents", json=data, timeout=5)
+        resp.raise_for_status()
+        return resp.json().get("incident_id")
+    except Exception:
+        return None
+
+
+def _create_incident_via_db(data):
+    """Create incident directly in DB. Returns incident_id."""
+    from backend.database import init_db, create_incident as db_create
+    init_db()
+    return db_create(data)
+
 
 # ── Sidebar (Google Maps left panel) ─────────────────────────
 analyze_btn, all_set, form_data = render_sidebar()
@@ -79,44 +96,26 @@ if analyze_btn and all_set:
             blocked_street = "Unknown Road"
         st.session_state.blocked_street = blocked_street
 
-        # Create incident via backend API (triggers WebSocket broadcast to user app)
-        try:
-            inc_resp = api_create({
-                "crash_lat": st.session_state.crash_lat,
-                "crash_lng": st.session_state.crash_lng,
-                "start_lat": st.session_state.start_lat,
-                "start_lng": st.session_state.start_lng,
-                "end_lat": st.session_state.end_lat,
-                "end_lng": st.session_state.end_lng,
-                "blocked_street": blocked_street,
-                "vehicle_type": form_data["vehicle_type"],
-                "lanes_affected": form_data["lanes_affected"],
-                "traffic_density": form_data["traffic_density"],
-                "weather": form_data["weather"],
-                "notes": form_data["notes"],
-            })
-            incident_id = inc_resp["incident_id"]
-        except Exception:
-            # Fallback: save directly to DB if backend is down
-            from backend.database import init_db, create_incident as db_create
-            init_db()
-            incident_id = db_create({
-                "crash_lat": st.session_state.crash_lat,
-                "crash_lng": st.session_state.crash_lng,
-                "start_lat": st.session_state.start_lat,
-                "start_lng": st.session_state.start_lng,
-                "end_lat": st.session_state.end_lat,
-                "end_lng": st.session_state.end_lng,
-                "blocked_street": blocked_street,
-                "vehicle_type": form_data["vehicle_type"],
-                "lanes_affected": form_data["lanes_affected"],
-                "traffic_density": form_data["traffic_density"],
-                "weather": form_data["weather"],
-                "notes": form_data["notes"],
-            })
+        inc_data = {
+            "crash_lat": st.session_state.crash_lat,
+            "crash_lng": st.session_state.crash_lng,
+            "start_lat": st.session_state.start_lat,
+            "start_lng": st.session_state.start_lng,
+            "end_lat": st.session_state.end_lat,
+            "end_lng": st.session_state.end_lng,
+            "blocked_street": blocked_street,
+            "vehicle_type": form_data["vehicle_type"],
+            "lanes_affected": form_data["lanes_affected"],
+            "traffic_density": form_data["traffic_density"],
+            "weather": form_data["weather"],
+            "notes": form_data["notes"],
+        }
+
+        # Create incident — try API first (WebSocket broadcast), fallback to DB
+        incident_id = _create_incident_via_api(inc_data) or _create_incident_via_db(inc_data)
         st.session_state.incident_id = incident_id
 
-        # Compute alternate routes (direct — heavy operation)
+        # Compute alternate routes
         routes, blocked = compute_alternate_routes(
             G,
             st.session_state.start_lat, st.session_state.start_lng,
@@ -140,11 +139,19 @@ if analyze_btn and all_set:
             "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
 
-        # AI calls (direct — heavy operations)
-        sev = assess_severity(crash_details)
-        dispatch = suggest_dispatch(crash_details, sev)
-        analysis = analyze_incident(crash_details, routes, blocked or blocked_street)
-        congestion = predict_congestion(crash_details, sev)
+        # AI calls — run in parallel (4 calls at once instead of sequential)
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            f_sev = pool.submit(assess_severity, crash_details)
+            f_analysis = pool.submit(analyze_incident, crash_details, routes, blocked or blocked_street)
+
+            # dispatch and congestion depend on severity — submit after sev completes
+            sev = f_sev.result()
+            f_dispatch = pool.submit(suggest_dispatch, crash_details, sev)
+            f_congestion = pool.submit(predict_congestion, crash_details, sev)
+
+            dispatch = f_dispatch.result()
+            analysis = f_analysis.result()
+            congestion = f_congestion.result()
 
         st.session_state.severity = sev
         st.session_state.dispatch = dispatch
@@ -194,6 +201,8 @@ if analyze_btn and all_set:
     except Exception as e:
         loading.empty()
         st.error(f"Error: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 
 # ── Route Cards + Details ─────────────────────────────────────
 render_route_cards()

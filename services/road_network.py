@@ -152,9 +152,16 @@ def get_route_coords(G, route_nodes):
 
 
 def get_street_name(G, u, v, key=0):
-    """Return the street name for an edge, or 'Unnamed Road' if absent."""
+    """Return the street name for an edge. If unnamed, check neighboring edges."""
     edge_data = G.edges[u, v, key]
-    name = edge_data.get("name", "Unnamed Road")
-    if isinstance(name, list):
-        name = " / ".join(name)
-    return name
+    name = edge_data.get("name")
+    if name:
+        return " / ".join(name) if isinstance(name, list) else name
+
+    # Edge is unnamed — check all edges connected to u and v for a name
+    for node in (u, v):
+        for _, neighbor, _, data in G.edges(node, keys=True, data=True):
+            n = data.get("name")
+            if n:
+                return (" / ".join(n) if isinstance(n, list) else n) + " (near)"
+    return "Local Road"

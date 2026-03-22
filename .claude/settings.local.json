@@ -18,7 +18,9 @@
       "Bash(powershell -Command \"Get-Process -Id 15300 | Select-Object ProcessName,Id\")",
       "Bash(powershell -Command \"Stop-Process -Id 5236 -Force\")",
       "Bash(powershell -Command \"Stop-Process -Id 15300 -Force\")",
-      "Bash(find /d/mesa -name *example* -o -name *template*)"
+      "Bash(find /d/mesa -name *example* -o -name *template*)",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | Select-Object OwningProcess | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object OwningProcess | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Write-Output 'Ports cleared'\" 2>&1)",
+      "Bash(powershell -Command \"Stop-Process -Name python -Force -ErrorAction SilentlyContinue; Write-Output 'Done'\" 2>&1)"
     ]
   }
 }

@@ -220,8 +220,10 @@ Notes: {crash_details.get('notes', 'None')}
 # ═══════════════════════════════════════════════════════════════
 
 CONGESTION_PROMPT = """You are a traffic congestion prediction expert for Ahmedabad, India.
+You know Ahmedabad's road network well: SG Highway, Ashram Road, CG Road, Relief Road, Nehru Bridge, Ellis Bridge, SP Ring Road, 132 Ft Ring Road, Sarkhej-Gandhinagar Highway, Drive-In Road, Law Garden, Vastrapur, Satellite, Paldi, Navrangpura, Maninagar, etc.
 
-Given the incident details, predict the congestion impact.
+Given the incident details (including GPS coordinates), predict the congestion impact.
+Use the GPS coordinates to identify the actual neighborhood and nearby landmarks.
 
 Return ONLY valid JSON:
 {
@@ -230,15 +232,25 @@ Return ONLY valid JSON:
   "affected_areas": [
     {
       "area": "SG Highway towards Vastrapur",
-      "impact": "Heavy delays expected",
-      "alternative": "Use SP Ring Road"
+      "impact": "Heavy delays, 15-20 min added travel time",
+      "alternative": "Use SP Ring Road via Thaltej"
+    },
+    {
+      "area": "Ashram Road near Income Tax",
+      "impact": "Moderate spillover congestion",
+      "alternative": "Use Riverfront Road"
     }
   ],
   "congestion_level": "Severe",
-  "advice": "Brief overall advisory for commuters"
+  "advice": "Specific actionable advisory mentioning real streets and landmarks"
 }
 
-Return ONLY valid JSON.
+Rules:
+- Use REAL Ahmedabad street names, areas, and landmarks — never say "adjacent roads" or "surrounding areas".
+- Each affected area must name a specific road or intersection.
+- Each alternative must name a specific bypass route.
+- The advice must be actionable with real directions.
+- Return ONLY valid JSON.
 """
 
 
@@ -248,9 +260,14 @@ def predict_congestion(crash_details: dict, severity: dict) -> dict:
 Severity: {severity.get('severity_score', 5)}/10
 Time of incident: {crash_details.get('time', 'Unknown')}
 Crashed street: {crash_details.get('blocked_street', 'Unknown')}
+Crash GPS: {crash_details.get('crash_location', 'Unknown')}
+Start point GPS: {crash_details.get('start_location', 'Unknown')}
+End point GPS: {crash_details.get('end_location', 'Unknown')}
 Lanes affected: {crash_details.get('lanes_affected', '1')}
 Traffic density: {crash_details.get('traffic_density', 'Moderate')}
 Weather: {crash_details.get('weather', 'Clear')}
+Vehicle type: {crash_details.get('vehicle_type', 'Unknown')}
+Notes: {crash_details.get('notes', 'None')}
 """
     return _call_llm(CONGESTION_PROMPT, user_msg, temperature=0.3, max_tokens=800)
 

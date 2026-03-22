@@ -1,13 +1,12 @@
 /**
  * hooks/useIncidents.js — WebSocket + polling hook for live incident feed.
- * WebSocket for instant updates, polling every 10s as fallback for
- * changes made directly to the DB (e.g. admin app resolving incidents).
+ * WebSocket for instant updates, polling every 5s as fallback.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchActiveIncidents } from '../services/api';
 
-const POLL_INTERVAL = 10000; // 10 seconds
+const POLL_INTERVAL = 5000; // 5 seconds
 
 export default function useIncidents() {
   const [incidents, setIncidents] = useState([]);
@@ -16,7 +15,7 @@ export default function useIncidents() {
   const reconnectTimer = useRef(null);
   const pollTimer = useRef(null);
 
-  /* Poll active incidents from REST API as fallback */
+  /* Poll active incidents from REST API */
   const poll = useCallback(async () => {
     try {
       const data = await fetchActiveIncidents();
@@ -27,55 +26,62 @@ export default function useIncidents() {
   }, []);
 
   const connect = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${protocol}://${window.location.hostname}:8080/ws/incidents`;
+    // Use Vite proxy for WebSocket in dev, direct for production
+    const loc = window.location;
+    const wsUrl = `${loc.protocol === 'https:' ? 'wss' : 'ws'}://${loc.host}/ws/incidents`;
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    try {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    ws.onopen = () => {
-      setConnected(true);
-      if (reconnectTimer.current) {
-        clearTimeout(reconnectTimer.current);
-        reconnectTimer.current = null;
-      }
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-
-        if (msg.type === 'initial') {
-          setIncidents(msg.incidents || []);
-        } else if (msg.type === 'new_incident') {
-          setIncidents((prev) => [msg.incident, ...prev]);
-        } else if (msg.type === 'incident_updated') {
-          setIncidents((prev) =>
-            prev.map((inc) => (inc.id === msg.incident.id ? msg.incident : inc))
-          );
-        } else if (msg.type === 'incident_resolved') {
-          setIncidents((prev) =>
-            prev.filter((inc) => inc.id !== msg.incident_id)
-          );
+      ws.onopen = () => {
+        setConnected(true);
+        if (reconnectTimer.current) {
+          clearTimeout(reconnectTimer.current);
+          reconnectTimer.current = null;
         }
-      } catch (e) {
-        console.error('WS parse error:', e);
-      }
-    };
+      };
 
-    ws.onclose = () => {
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+
+          if (msg.type === 'initial') {
+            setIncidents(msg.incidents || []);
+          } else if (msg.type === 'new_incident') {
+            setIncidents((prev) => [msg.incident, ...prev]);
+          } else if (msg.type === 'incident_updated') {
+            setIncidents((prev) =>
+              prev.map((inc) => (inc.id === msg.incident.id ? msg.incident : inc))
+            );
+          } else if (msg.type === 'incident_resolved') {
+            setIncidents((prev) =>
+              prev.filter((inc) => inc.id !== msg.incident_id)
+            );
+          }
+        } catch (e) {
+          console.error('WS parse error:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        reconnectTimer.current = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => ws.close();
+    } catch {
+      // WebSocket connection failed — rely on polling
       setConnected(false);
-      reconnectTimer.current = setTimeout(connect, 3000);
-    };
-
-    ws.onerror = () => ws.close();
+      reconnectTimer.current = setTimeout(connect, 5000);
+    }
   }, []);
 
   useEffect(() => {
     // Connect WebSocket
     connect();
 
-    // Start polling as fallback
+    // Start polling as fallback (catches DB-level changes from admin app)
     poll();
     pollTimer.current = setInterval(poll, POLL_INTERVAL);
 
