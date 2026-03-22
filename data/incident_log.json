@@ -350,5 +350,27 @@
     "analysis_summary": "A car crash occurred on an unnamed road near Law Garden Circle, affecting one lane with light traffic density. The incident happened at 01:02 on 2026-03-22 under clear weather conditions.",
     "route_count": 3,
     "saved_at": "2026-03-22 01:02:18"
+  },
+  {
+    "incident": {
+      "crash_lat": 23.016943267757277,
+      "crash_lng": 72.55808830261232,
+      "start_lat": 23.01954029031591,
+      "start_lng": 72.5574177503586,
+      "end_lat": 23.01469181609675,
+      "end_lng": 72.55913972854616,
+      "blocked_street": "Parimal Underpass",
+      "vehicle_type": "Car",
+      "lanes_affected": "1",
+      "traffic_density": "Light",
+      "weather": "Clear",
+      "notes": "",
+      "timestamp": "2026-03-22 01:28:25",
+      "severity_score": 2,
+      "severity_reason": "Single-vehicle incident, 1 lane affected, light traffic, clear weather"
+    },
+    "analysis_summary": "A car crash occurred at Parimal Underpass, affecting 1 lane with light traffic density. The incident happened at 01:28 on 2026-03-22.",
+    "route_count": 3,
+    "saved_at": "2026-03-22 01:28:25"
   }
 ]

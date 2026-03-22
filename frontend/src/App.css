@@ -1,0 +1,680 @@
+/**
+ * App.css — Pixel-accurate Google Maps directions panel clone.
+ *
+ * Design tokens from Google Maps:
+ *   - Font: Google Sans / Roboto
+ *   - Blue accent: #1a73e8
+ *   - Text: #202124 (primary), #3c4043 (secondary), #70757a (tertiary), #9aa0a6 (disabled)
+ *   - Surfaces: #fff (card), #f1f3f4 (input bg), #f8f9fa (hover)
+ *   - Borders: #dadce0 (normal), #e8eaed (light)
+ *   - Card shadow: 0 2px 6px rgba(0,0,0,.3)
+ *   - Radius: 8px (cards), 20px (buttons), 6px (inputs)
+ */
+
+/* ── Reset ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root {
+  height: 100%;
+  font-family: Roboto, 'Google Sans', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #3c4043;
+}
+
+/* ── Full-bleed layout ─────────────────────────── */
+.app-layout {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+.map-area {
+  position: absolute;
+  inset: 0;
+}
+.map-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Floating panel ────────────────────────────── */
+.directions-panel {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 408px;
+  max-height: calc(100vh - 16px);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Directions card ───────────────────────────── */
+.directions-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  overflow: visible;
+  position: relative;
+  z-index: 10;
+}
+
+/* Transport mode bar / Header */
+.transport-modes {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e8eaed;
+  gap: 8px;
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #202124;
+  flex: 1;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+}
+.transport-mode {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem;
+  color: #70757a;
+  transition: background 0.15s;
+  position: relative;
+}
+.transport-mode:hover { background: #f1f3f4; }
+.transport-mode.active {
+  color: #1a73e8;
+}
+.transport-mode.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 8px; right: 8px;
+  height: 3px;
+  background: #1a73e8;
+  border-radius: 3px 3px 0 0;
+}
+.transport-close {
+  margin-left: auto;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #70757a;
+  display: flex; align-items: center; justify-content: center;
+}
+.transport-close:hover { background: #f1f3f4; }
+
+/* ── Search area ───────────────────────────────── */
+.search-area {
+  display: flex;
+  padding: 12px 8px 6px 0;
+}
+
+/* Dots column (○ ⋮ ●) */
+.dots-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40px;
+  padding: 12px 0;
+  flex-shrink: 0;
+}
+.dot-start {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid #5f6368;
+  background: transparent;
+  flex-shrink: 0;
+}
+.dot-connector {
+  width: 2px;
+  flex: 1;
+  min-height: 14px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #9aa0a6 0px, #9aa0a6 3px,
+    transparent 3px, transparent 6px
+  );
+}
+.dot-end {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #5f6368;
+  flex-shrink: 0;
+}
+
+/* Input fields */
+.inputs-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.search-field {
+  position: relative;
+}
+.search-field input {
+  width: 100%;
+  height: 36px;
+  padding: 0 32px 0 10px;
+  border: none;
+  border-radius: 3px;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 14px;
+  color: #202124;
+  background: #f1f3f4;
+  outline: none;
+  transition: box-shadow 0.2s, background 0.2s;
+}
+.search-field input:focus {
+  background: #fff;
+  box-shadow: inset 0 0 0 1.5px #1a73e8;
+}
+.search-field input::placeholder { color: #9aa0a6; font-size: 13px; }
+
+.search-field .field-icon {
+  position: absolute;
+  right: 4px; top: 50%;
+  transform: translateY(-50%);
+  width: 28px; height: 28px;
+  border: none; background: transparent;
+  cursor: pointer; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; color: #70757a;
+}
+.search-field .field-icon:hover { background: #e8eaed; }
+
+/* Swap button */
+.swap-column {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.swap-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #70757a;
+  display: flex; align-items: center; justify-content: center;
+}
+.swap-btn:hover { background: #f1f3f4; }
+
+/* ── Actions bar ───────────────────────────────── */
+.actions-bar {
+  padding: 0 16px 12px;
+}
+.btn-directions {
+  width: 100%;
+  padding: 8px 24px;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.2s, box-shadow 0.2s;
+  letter-spacing: 0.25px;
+}
+.btn-directions:hover:not(:disabled) {
+  background: #1557b0;
+  box-shadow: 0 1px 3px rgba(26,115,232,.4);
+}
+.btn-directions:disabled {
+  background: #dadce0;
+  color: #9aa0a6;
+  cursor: default;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Search dropdown ───────────────────────────── */
+.search-dropdown {
+  list-style: none;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  max-height: 220px;
+  overflow-y: auto;
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  z-index: 9999;
+  padding: 4px 0;
+}
+.search-result {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 16px;
+  gap: 12px;
+  cursor: pointer;
+}
+.search-result:hover { background: #f1f3f4; }
+.search-result-icon {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  color: #70757a;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.search-result-name { font-size: 14px; color: #202124; font-weight: 400; }
+.search-result-addr {
+  font-size: 12px; color: #70757a;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+/* ── Routes panel ──────────────────────────────── */
+.routes-panel {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
+
+.routes-header {
+  padding: 12px 16px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #e8eaed;
+}
+.routes-header-title {
+  font-size: 12px;
+  color: #70757a;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.crashes-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #fce8e6;
+  color: #c5221f;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Route card — matches Google Maps exactly */
+.route-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 16px 12px 12px;
+  gap: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f3f4;
+  border-left: 4px solid transparent;
+  transition: background 0.1s;
+}
+.route-card:last-child { border-bottom: none; }
+.route-card:hover { background: #f8f9fa; }
+
+.route-card-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: #5f6368;
+  padding-top: 2px;
+}
+
+.route-card-main { flex: 1; min-width: 0; }
+
+.route-via {
+  font-size: 14px;
+  font-weight: 500;
+  color: #202124;
+  line-height: 1.3;
+}
+.route-desc {
+  font-size: 12px;
+  color: #70757a;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.route-links {
+  margin-top: 6px;
+  display: flex;
+  gap: 16px;
+}
+.route-link {
+  font-size: 12px;
+  color: #1a73e8;
+  cursor: pointer;
+  background: none; border: none;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 0;
+}
+.route-link:hover { text-decoration: underline; }
+
+.route-card-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+.route-time {
+  font-size: 14px;
+  font-weight: 500;
+  color: #202124;
+  white-space: nowrap;
+}
+.route-distance {
+  font-size: 12px;
+  color: #70757a;
+  margin-top: 1px;
+}
+
+/* Active route highlight */
+.route-active { background: #e8f0fe; }
+.route-active:hover { background: #d2e3fc; }
+.route-active .route-time { font-weight: 700; }
+.route-active .route-via { font-weight: 600; }
+
+/* ── Incidents panel ───────────────────────────── */
+.incidents-panel {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  overflow-y: auto;
+  max-height: 300px;
+}
+.incidents-header {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #70757a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #e8eaed;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.live-dot.live {
+  background: #34a853;
+  box-shadow: 0 0 0 3px rgba(52,168,83,.2);
+}
+.live-dot.offline { background: #ea4335; }
+
+.incident-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 16px;
+  gap: 10px;
+  border-bottom: 1px solid #f1f3f4;
+  cursor: default;
+}
+.incident-card:last-child { border-bottom: none; }
+.incident-card-icon { font-size: 0.85rem; flex-shrink: 0; padding-top: 2px; }
+.incident-card-body { flex: 1; min-width: 0; }
+.incident-street { font-size: 13px; font-weight: 500; color: #202124; }
+.incident-meta { font-size: 11px; color: #70757a; margin-top: 2px; }
+
+.sev-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.sev-low      { background: #e6f4ea; color: #137333; }
+.sev-medium   { background: #fef7e0; color: #b06000; }
+.sev-high     { background: #fce8e6; color: #c5221f; }
+.sev-critical { background: #f3e8fd; color: #7627bb; }
+
+.empty-hint {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #9aa0a6;
+}
+
+/* ── Leaflet overrides ─────────────────────────── */
+.leaflet-control-zoom {
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3) !important;
+  overflow: hidden !important;
+}
+.leaflet-control-zoom a {
+  width: 40px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  font-size: 18px !important;
+  color: #3c4043 !important;
+  background: #fff !important;
+  border: none !important;
+  border-bottom: 1px solid #e8eaed !important;
+}
+.leaflet-control-zoom a:last-child { border-bottom: none !important; }
+.leaflet-control-zoom a:hover { background: #f1f3f4 !important; }
+
+/* Push zoom controls right to avoid overlap with panel */
+.leaflet-right .leaflet-control { margin-right: 10px !important; }
+.leaflet-top .leaflet-control { margin-top: 10px !important; }
+
+/* Crash pulse */
+@keyframes crash-pulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════
+   ANIMATION SYSTEM
+   Duration tokens:
+     --dur-instant: 100ms   (button press)
+     --dur-quick:   200ms   (hover, state change)
+     --dur-medium:  350ms   (layout reveal)
+     --dur-slow:    500ms   (entrance)
+   Easing tokens:
+     --ease-out: cubic-bezier(0.25, 1, 0.5, 1)
+     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1)
+   ══════════════════════════════════════════════════ */
+
+:root {
+  --dur-instant: 100ms;
+  --dur-quick: 200ms;
+  --dur-medium: 350ms;
+  --dur-slow: 500ms;
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── 1. Panel entrance — slide in from left ────── */
+@keyframes panel-enter {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.directions-panel {
+  animation: panel-enter var(--dur-slow) var(--ease-out-expo) both;
+}
+.directions-card {
+  animation: panel-enter var(--dur-slow) var(--ease-out-expo) both;
+}
+.incidents-panel {
+  animation: panel-enter var(--dur-slow) var(--ease-out-expo) 150ms both;
+}
+
+/* ── 2. Route card stagger reveal ──────────────── */
+@keyframes card-reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.routes-panel {
+  animation: panel-enter var(--dur-medium) var(--ease-out-expo) both;
+}
+.route-card {
+  animation: card-reveal var(--dur-medium) var(--ease-out) both;
+}
+.route-card:nth-child(2) { animation-delay: 80ms; }
+.route-card:nth-child(3) { animation-delay: 160ms; }
+.route-card:nth-child(4) { animation-delay: 240ms; }
+.route-card:nth-child(5) { animation-delay: 320ms; }
+
+/* ── 3. Search dropdown slide-fade ─────────────── */
+@keyframes dropdown-enter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.search-dropdown {
+  animation: dropdown-enter var(--dur-quick) var(--ease-out) both;
+}
+.search-result {
+  transition: background var(--dur-instant) ease;
+}
+
+/* ── 4. Button feedback ────────────────────────── */
+.btn-directions {
+  transition: background var(--dur-quick) ease,
+              box-shadow var(--dur-quick) ease,
+              transform var(--dur-instant) ease;
+}
+.btn-directions:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.transport-mode {
+  transition: background var(--dur-instant) ease,
+              color var(--dur-instant) ease;
+}
+.transport-mode:active { transform: scale(0.9); }
+
+.transport-close {
+  transition: background var(--dur-instant) ease, transform var(--dur-quick) ease;
+}
+.transport-close:hover { transform: rotate(90deg); }
+
+/* ── 5. Swap button rotation ───────────────────── */
+.swap-btn {
+  transition: background var(--dur-instant) ease,
+              transform var(--dur-quick) var(--ease-out);
+}
+.swap-btn:hover { transform: rotate(180deg); }
+.swap-btn:active { transform: rotate(180deg) scale(0.85); }
+
+/* ── 6. Input focus glow transition ────────────── */
+.search-field input {
+  transition: box-shadow var(--dur-quick) var(--ease-out),
+              background var(--dur-quick) var(--ease-out);
+}
+
+/* ── 7. Field icon (clear / search) ────────────── */
+.search-field .field-icon {
+  transition: background var(--dur-instant) ease,
+              opacity var(--dur-instant) ease,
+              transform var(--dur-instant) ease;
+}
+.search-field .field-icon:active { transform: translateY(-50%) scale(0.85); }
+
+/* ── 8. Live dot breathing pulse ───────────────── */
+@keyframes live-breathe {
+  0%   { box-shadow: 0 0 0 0 rgba(52,168,83,.4); }
+  70%  { box-shadow: 0 0 0 6px rgba(52,168,83,0); }
+  100% { box-shadow: 0 0 0 0 rgba(52,168,83,0); }
+}
+.live-dot.live {
+  animation: live-breathe 2s ease-in-out infinite;
+}
+
+/* ── 9. Incident card hover ────────────────────── */
+.incident-card {
+  transition: background var(--dur-instant) ease;
+}
+.incident-card:hover { background: #f8f9fa; }
+
+/* ── 10. Route card hover lift ─────────────────── */
+.route-card {
+  transition: background var(--dur-instant) ease,
+              box-shadow var(--dur-quick) ease;
+}
+.route-card:hover {
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+}
+
+/* ── 11. Severity badge pop-in ─────────────────── */
+@keyframes badge-pop {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.sev-badge {
+  animation: badge-pop var(--dur-quick) var(--ease-out) both;
+}
+
+/* ── 12. Route link underline sweep ────────────── */
+.route-link {
+  position: relative;
+}
+.route-link::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #1a73e8;
+  transition: width var(--dur-quick) var(--ease-out);
+}
+.route-link:hover::after { width: 100%; }
+.route-link:hover { text-decoration: none; }
+
+/* ── 13. Crashes badge pulse ───────────────────── */
+@keyframes badge-attention {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+.crashes-badge {
+  animation: badge-attention 2s ease-in-out 3;
+}
+
+/* ══════════════════════════════════════════════════
+   ACCESSIBILITY — Reduced Motion
+   ══════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

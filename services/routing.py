@@ -1,10 +1,10 @@
 """
 services/routing.py — Compute alternate routes between start and end points
-that avoid crash location(s). Enhanced with ETA estimation.
+that avoid crash location(s). Uses edge-removal for truly diverse routes.
 """
 
 import networkx as nx
-from services.road_network import snap_to_nearest_node, get_route_coords, get_street_name, get_nearest_edge
+from services.road_network import snap_to_nearest_node, get_route_coords, get_street_name, get_nearest_edge, get_nearby_edges
 
 
 # Speed estimates in km/h by traffic density
@@ -35,14 +35,42 @@ def _to_digraph(G):
 
 
 def estimate_eta(distance_m: float, traffic_density: str = "Moderate") -> float:
-    """
-    Estimate travel time in minutes given distance and traffic density.
-    Returns rounded float.
-    """
+    """Estimate travel time in minutes given distance and traffic density."""
     speed_kmh = SPEED_MAP.get(traffic_density, 25)
-    speed_ms = speed_kmh * 1000 / 3600  # convert to m/s
+    speed_ms = speed_kmh * 1000 / 3600
     time_seconds = distance_m / speed_ms if speed_ms > 0 else 0
     return round(time_seconds / 60, 1)
+
+
+def _extract_route_info(G, D, path, rank, traffic_density):
+    """Build a route dict from a node path, using original graph for true distances."""
+    total_dist = 0
+    street_names = set()
+    for a, b in zip(path[:-1], path[1:]):
+        # Use original graph for accurate distance
+        if G.has_edge(a, b):
+            edge_data = list(G[a][b].values())[0]
+        else:
+            edge_data = D.edges.get((a, b), {})
+        total_dist += edge_data.get("length", 0)
+        name = edge_data.get("name", "Unnamed Road")
+        if isinstance(name, list):
+            street_names.update(name)
+        else:
+            street_names.add(name)
+
+    coords = get_route_coords(G, path)
+    eta = estimate_eta(total_dist, traffic_density)
+    return {
+        "coords": coords,
+        "nodes": path,
+        "distance_m": round(total_dist),
+        "street_summary": ", ".join(
+            sorted(street_names - {"Unnamed Road"})[:5]
+        ) or "Local Roads",
+        "rank": rank,
+        "eta_minutes": eta,
+    }
 
 
 def compute_alternate_routes(G, start_lat, start_lng, end_lat, end_lng,
@@ -50,15 +78,10 @@ def compute_alternate_routes(G, start_lat, start_lng, end_lat, end_lng,
                               traffic_density="Moderate",
                               extra_crash_points=None):
     """
-    Compute up to 3 alternate routes from start→end that AVOID crash edges.
+    Compute up to 3 diverse alternate routes from start→end that AVOID crash edges.
 
-    Args:
-        G: NetworkX MultiDiGraph of the road network
-        start_lat, start_lng: Start location
-        end_lat, end_lng: End location
-        crash_lat, crash_lng: Primary crash location
-        traffic_density: For ETA estimation
-        extra_crash_points: Optional list of (lat, lng) tuples for multi-crash
+    Strategy: find shortest path, then remove a chunk of its edges to force the
+    next path onto completely different streets. This guarantees visually distinct routes.
 
     Returns: (routes_list, blocked_street_name)
     """
@@ -67,61 +90,65 @@ def compute_alternate_routes(G, start_lat, start_lng, end_lat, end_lng,
 
     D = _to_digraph(G)
 
-    # Remove the primary crashed edge
+    # Block all edges within ~200m of crash
     blocked_street = "Unknown Road"
     try:
         u, v, key = get_nearest_edge(G, crash_lat, crash_lng)
         blocked_street = get_street_name(G, u, v, key)
-        if D.has_edge(u, v):
-            D.remove_edge(u, v)
-        if D.has_edge(v, u):
-            D.remove_edge(v, u)
+
+        nearby = get_nearby_edges(G, crash_lat, crash_lng, radius_deg=0.002)
+        for eu, ev, _ in nearby:
+            if D.has_edge(eu, ev):
+                D.remove_edge(eu, ev)
+            if D.has_edge(ev, eu):
+                D.remove_edge(ev, eu)
     except Exception:
         pass
 
-    # Remove edges for any additional crash points
+    # Remove edges for additional crash points
     if extra_crash_points:
         for clat, clng in extra_crash_points:
             try:
-                u2, v2, _ = get_nearest_edge(G, clat, clng)
-                if D.has_edge(u2, v2):
-                    D.remove_edge(u2, v2)
-                if D.has_edge(v2, u2):
-                    D.remove_edge(v2, u2)
+                for eu, ev, _ in get_nearby_edges(G, clat, clng, radius_deg=0.002):
+                    if D.has_edge(eu, ev):
+                        D.remove_edge(eu, ev)
+                    if D.has_edge(ev, eu):
+                        D.remove_edge(ev, eu)
             except Exception:
                 pass
 
-    # Find up to MAX_ALTERNATE_ROUTES shortest paths
     routes = []
-    try:
-        path_gen = nx.shortest_simple_paths(D, src, dst, weight="length")
-        for i, path in enumerate(path_gen):
-            if i >= MAX_ALTERNATE_ROUTES:
-                break
-            total_dist = 0
-            street_names = set()
-            for a, b in zip(path[:-1], path[1:]):
-                edge_data = D.edges[a, b]
-                total_dist += edge_data.get("length", 0)
-                name = edge_data.get("name", "Unnamed Road")
-                if isinstance(name, list):
-                    street_names.update(name)
-                else:
-                    street_names.add(name)
 
-            coords = get_route_coords(G, path)
-            eta = estimate_eta(total_dist, traffic_density)
-            routes.append({
-                "coords": coords,
-                "nodes": path,
-                "distance_m": round(total_dist),
-                "street_summary": ", ".join(
-                    sorted(street_names - {"Unnamed Road"})[:5]
-                ) or "Local Roads",
-                "rank": i + 1,
-                "eta_minutes": eta,
-            })
-    except (nx.NetworkXNoPath, nx.NodeNotFound):
-        pass
+    for route_num in range(MAX_ALTERNATE_ROUTES):
+        try:
+            path = nx.shortest_path(D, src, dst, weight="length")
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            break
+
+        route = _extract_route_info(G, D, path, route_num + 1, traffic_density)
+        routes.append(route)
+
+        # Remove the middle 60% of edges from this path to force divergence.
+        # Keep start/end edges so the graph stays connected near src/dst.
+        edges = list(zip(path[:-1], path[1:]))
+        n = len(edges)
+        if n <= 2:
+            # Very short path — remove all edges
+            for a, b in edges:
+                if D.has_edge(a, b):
+                    D.remove_edge(a, b)
+                if D.has_edge(b, a):
+                    D.remove_edge(b, a)
+        else:
+            # Keep first 20% and last 20%, remove the middle 60%
+            keep_start = max(1, n // 5)
+            keep_end = max(1, n // 5)
+            remove_from = keep_start
+            remove_to = n - keep_end
+            for a, b in edges[remove_from:remove_to]:
+                if D.has_edge(a, b):
+                    D.remove_edge(a, b)
+                if D.has_edge(b, a):
+                    D.remove_edge(b, a)
 
     return routes, blocked_street

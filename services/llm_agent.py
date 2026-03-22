@@ -4,10 +4,13 @@ Features: incident analysis, severity scoring, resource dispatch,
           congestion advisory, signal re-timing, public alerts, chat.
 """
 
+import base64
 import json
 import os
 from groq import Groq
 from config import GROQ_MODEL
+
+VISION_MODEL = "llama-3.2-90b-vision-preview"
 
 
 def _get_client():
@@ -283,4 +286,75 @@ def chat_query(conversation_history: list, incident_context: str, user_question:
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        return f"⚠️ Error communicating with Groq: {e}"
+        return f"Error communicating with Groq: {e}"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  6) VISION: CRASH PHOTO ANALYSIS
+# ═══════════════════════════════════════════════════════════════
+
+VISION_PROMPT = """You are a traffic accident analyst. Analyze this crash scene photo and extract structured information.
+
+Return ONLY valid JSON:
+{
+  "vehicle_type": "Car / Truck / Two-Wheeler / Bus / Auto-Rickshaw / Multi-Vehicle",
+  "vehicle_count": 2,
+  "estimated_severity": 7,
+  "severity_label": "High",
+  "lanes_blocked": "2",
+  "road_condition": "Wet / Dry / Damaged",
+  "weather_visible": "Clear / Rain / Fog / Night",
+  "visible_damage": "Brief description of visible damage",
+  "injuries_likely": true,
+  "hazards": "Fuel spill, debris, fire, etc. or 'None visible'",
+  "recommended_response": "Brief recommendation for first responders"
+}
+
+Return ONLY valid JSON. Be accurate based on what you can see.
+"""
+
+
+def analyze_crash_photo(image_data: bytes | str) -> dict:
+    """
+    Analyze a crash scene photo using vision LLM.
+
+    Args:
+        image_data: Either raw bytes of the image, or a base64-encoded string.
+
+    Returns:
+        Dict with vehicle_type, severity, lanes_blocked, etc.
+    """
+    client = _get_client()
+
+    # Convert to base64 if raw bytes
+    if isinstance(image_data, bytes):
+        b64 = base64.b64encode(image_data).decode("utf-8")
+    else:
+        b64 = image_data
+
+    try:
+        response = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": VISION_PROMPT},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                        },
+                    ],
+                }
+            ],
+            temperature=0.2,
+            max_tokens=800,
+        )
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```"):
+            content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return {"error": "Vision LLM returned invalid JSON", "raw": content}
+    except Exception as e:
+        return {"error": str(e)}
